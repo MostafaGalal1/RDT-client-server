@@ -1,0 +1,4 @@
+/home/mostafa-galal/CLionProjects/untitled/cmake-build-debug/CMakeFiles/server.dir
+/home/mostafa-galal/CLionProjects/untitled/cmake-build-debug/CMakeFiles/client.dir
+/home/mostafa-galal/CLionProjects/untitled/cmake-build-debug/CMakeFiles/edit_cache.dir
+/home/mostafa-galal/CLionProjects/untitled/cmake-build-debug/CMakeFiles/rebuild_cache.dir
