@@ -1,57 +1,48 @@
 #include <iostream>
 #include <cstring>
 #include <cstdlib>
-#include <ctime>
-#include <sys/wait.h>
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <fstream>
-#include "cmake-build-debug/packets.h"
-
-const int MAX_DATA_SIZE = 500;
-const int ACK_SIZE = 8;
-const int TIMEOUT_SECONDS = 1;
+#include "packets.h"
 
 using namespace std;
 
-bool evaluate_check_sum(packet& packet) {
-    uint32_t sum = 0;
-
-    sum += packet.len;
-    sum += packet.cksum;
-    sum += static_cast<uint16_t>((packet.seqno >> 16) & 0xFFFF);
-    sum += static_cast<uint16_t>(packet.seqno & 0xFFFF);
-    for (int i = 0; i < packet.len; i += 2)
-        sum += (packet.data[i] << 8) + packet.data[i + 1];
-    sum = (sum + (sum >> 16)) & 0xFFFF;
-    return ~static_cast<uint16_t>(sum & 0xFFFF) == 0;
-}
-
-void process_data(const char* data, int size) {
-    cout.write(data, size);
-}
-
 void handle_client(int client_socket, sockaddr_in& client_address, double plp) {
     while (true) {
-        char buffer[MAX_DATA_SIZE + ACK_SIZE];
+        // done till end //
+        packet packet{};
         socklen_t client_address_len = sizeof(client_address);
 
-        ssize_t recv_size = recvfrom(client_socket, buffer, sizeof(buffer), 0,
-                                     (struct sockaddr*)&client_address, &client_address_len);
-        cout << "from child process" << endl;
+        ssize_t recv_size = recvfrom(client_socket, &packet, sizeof(packet), 0, (struct sockaddr*)&client_address, &client_address_len);
 
-        if (recv_size > 0 && static_cast<double>(rand()) / RAND_MAX > plp) {
-            process_data(buffer + ACK_SIZE, recv_size - ACK_SIZE);
+        cout << "from handle client" << endl;
+        if (recv_size == -1) {
+            perror("Erjjjjror receiving data");
+            exit(EXIT_FAILURE);
+        } else if (strlen(packet.data) == 0) {
+            cout << "Client disconnected" << endl;
+            break;
+        }
+        // end //
+
+        cout << "Packet number: " << packet.seqno << endl;
+        cout << check_sum(reinterpret_cast<uint16_t*>(&packet), ACK_SIZE + packet.len) << endl;
+        if (static_cast<double>(rand()) / RAND_MAX > plp) {
             // Send ACK
-            sendto(client_socket, buffer, ACK_SIZE, 0,
+            ack_packet ack_packet{};
+            construct_ack(packet, ack_packet);
+            sendto(client_socket, &ack_packet, ACK_SIZE, 0,
                    (struct sockaddr*)&client_address, client_address_len);
         } else {
-            cout << "Packet loss, ignoring the received datagram." << endl;
+            cout << "Packet loss due to PLP, ignoring sending ACK." << endl;
         }
     }
+    close(client_socket);
 }
 
 void server(int port, int seed, double plp) {
+    // done till end //
     srand(seed);
 
     int server_socket = socket(AF_INET, SOCK_DGRAM, 0);
@@ -70,35 +61,36 @@ void server(int port, int seed, double plp) {
         close(server_socket);
         exit(EXIT_FAILURE);
     }
+    // end //
 
     while (true) {
-        char buffer[MAX_DATA_SIZE + ACK_SIZE];
         sockaddr_in client_address{};
+        packet packet{};
         socklen_t client_address_len = sizeof(client_address);
 
-        ssize_t recv_size = recvfrom(server_socket, buffer, sizeof(buffer), 0,
+        ssize_t recv_size = recvfrom(server_socket, &packet, sizeof(packet), 0,
                                      (struct sockaddr*)&client_address, &client_address_len);
-        cout << "from main process" << endl;
 
-        if (recv_size > 0 && static_cast<double>(rand()) / RAND_MAX > plp) {
-            process_data(buffer + ACK_SIZE, recv_size - ACK_SIZE);
-            // Send ACK
-            sendto(server_socket, buffer, ACK_SIZE, 0,
-                   (struct sockaddr*)&client_address, client_address_len);
-        } else {
-            std::cout << "Packet loss, ignoring the received datagram." << std::endl;
+        cout << "Packet number: " << packet.seqno << endl;
+        cout << "from main process" << endl;
+        if (recv_size == -1) {
+            perror("Error receiving data");
+            exit(EXIT_FAILURE);
+        } else if (strlen(packet.data) == 0) {
+            cout << "Client disconnected" << endl;
         }
 
-        pid_t child_pid = fork();
-
-        if (child_pid == 0) { // Child process
-            close(server_socket); // Close the server socket in the child process
-            handle_client(server_socket, client_address, plp);
-            exit(EXIT_SUCCESS);
-        } else if (child_pid > 0) { // Parent process
-            // Continue listening for new clients
+        if (static_cast<double>(rand()) / RAND_MAX > plp) {
+            // Send ACK
+            ack_packet ack_packet{};
+            construct_ack(packet, ack_packet);
+            cout << "Sending ACK number: " << ack_packet.ackno << endl;
+            sendto(server_socket, &ack_packet, ACK_SIZE, 0,
+                   (struct sockaddr*)&client_address, client_address_len);
+            if (ack_packet.ackno > 750000)
+                sleep(1);
         } else {
-            perror("Error forking process");
+            cout << "Packet loss due to PLP, ignoring sending ACK." << endl;
         }
     }
 }

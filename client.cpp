@@ -1,72 +1,56 @@
 #include <iostream>
 #include <fstream>
-#include <cstring>
 #include <cstdlib>
 #include <unistd.h>
 #include <arpa/inet.h>
-#include "cmake-build-debug/packets.h"
-
-const int MAX_DATA_SIZE = 500;
-const int ACK_SIZE = 8;
-const int TIMEOUT_SECONDS = 1;
+#include "packets.h"
 
 using namespace std;
 
-void calculate_check_sum(packet& packet) {
-    uint32_t sum = 0;
+void send_data(packet& packet, int client_socket, const sockaddr_in& server_address) {
+    int maxfd = client_socket + 1;
+    fd_set readSet;
+    FD_ZERO(&readSet);
+    FD_SET(client_socket, &readSet);
 
-    sum += packet.len;
-    sum += static_cast<uint16_t>((packet.seqno >> 16) & 0xFFFF);
-    sum += static_cast<uint16_t>(packet.seqno & 0xFFFF);
-    for (int i = 0; i < packet.len; i += 2)
-        sum += (packet.data[i] << 8) + packet.data[i + 1];
-
-    sum = (sum + (sum >> 16)) & 0xFFFF;
-    packet.cksum = ~sum;
-}
-
-void construct_packet(packet& packet, const char* data, int size) {
-    packet.len = size;
-    calculate_check_sum(packet);
-    //TODO: set seqno number
-    memcpy(packet.data, data, size);
-}
-
-void send_data(const char* data, int size, int client_socket, const sockaddr_in& server_address) {
-    packet packet{};
-    construct_packet(packet, data, size);
-
-    char buffer[MAX_DATA_SIZE + ACK_SIZE];
-    memcpy(buffer + ACK_SIZE, data, size);
-
-    // Send data
-    sendto(client_socket, packet, sizeof(packet), 0,
-           (struct sockaddr*)&server_address, sizeof(server_address));
-
-    // Wait for ACK
-    fd_set read_fds;
-    FD_ZERO(&read_fds);
-    FD_SET(client_socket, &read_fds);
-
-    struct timeval timeout;
+    struct timeval timeout{};
     timeout.tv_sec = TIMEOUT_SECONDS;
     timeout.tv_usec = 0;
 
-    int activity = select(client_socket + 1, &read_fds, nullptr, nullptr, &timeout);
+    sendto(client_socket, &packet, sizeof(packet), 0,
+           (struct sockaddr*)&server_address, sizeof(server_address));
 
-    if (activity == -1) {
+    if (strlen(packet.data) == 0)
+        return;
+
+    int result = select(maxfd, &readSet, nullptr, nullptr, &timeout);
+
+    if (result == -1) {
         perror("Error in select");
         exit(EXIT_FAILURE);
-    } else if (activity == 0) {
-        cout << "Timeout, resending the datagram." << endl;
-        send_data(data, size, client_socket, server_address);
+    } else if (result == 0) {
+        cout << "Timeout: No ACK received. Resending data." << endl;
+        send_data(packet, client_socket, server_address);
     } else {
-        // ACK received
-        recvfrom(client_socket, buffer, sizeof(buffer), 0, nullptr, nullptr);
+        ack_packet ack_packet{};
+        socklen_t server_address_len = sizeof(server_address);
+
+        ssize_t recv_size = recvfrom(client_socket, &ack_packet, sizeof(ack_packet), 0,
+                                     (struct sockaddr*)&server_address, &server_address_len);
+
+        if (recv_size == -1) {
+            perror("Error receiving ACK");
+            exit(EXIT_FAILURE);
+        } else {
+            if (ack_packet.ackno > 750000)
+                sleep(1);
+            cout << "ACK number: " << ack_packet.ackno << endl;
+        }
     }
 }
 
 void client(const char* server_ip, int server_port, const char* filename) {
+    // done till end //
     int client_socket = socket(AF_INET, SOCK_DGRAM, 0);
     if (client_socket == -1) {
         perror("Error creating socket");
@@ -85,15 +69,21 @@ void client(const char* server_ip, int server_port, const char* filename) {
         exit(EXIT_FAILURE);
     }
 
+    uint32_t seqno = 0;
     char buffer[MAX_DATA_SIZE];
+
     while (!file.eof()) {
+        packet packet{};
         file.read(buffer, MAX_DATA_SIZE);
-        int read_size = static_cast<int>(file.gcount());
-        send_data(buffer, read_size, client_socket, server_address);
+        auto read_size = static_cast<uint16_t>(file.gcount());
+        construct_packet(packet, read_size, seqno, buffer);
+        send_data(packet, client_socket, server_address);
+        seqno += read_size;
     }
 
-    // Signal end of file
-    send_data("", 0, client_socket, server_address);
+    packet packet{};
+    packet.seqno = seqno;
+    send_data(packet, client_socket, server_address);
 
     file.close();
     close(client_socket);

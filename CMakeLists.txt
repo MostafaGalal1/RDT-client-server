@@ -5,9 +5,15 @@ set(CMAKE_CXX_STANDARD 17)
 
 add_executable(server
         server.cpp
-        cmake-build-debug/packets.h)
+        packets.h
+        check_sum.cpp
+        packet_construction.cpp
+)
 
 add_executable(client
         client.cpp
-        cmake-build-debug/packets.h)
+        packets.h
+        check_sum.cpp
+        packet_construction.cpp
+)
 

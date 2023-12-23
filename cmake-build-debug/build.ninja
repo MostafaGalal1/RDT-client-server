@@ -55,6 +55,18 @@ build CMakeFiles/server.dir/server.cpp.o: CXX_COMPILER__server_unscanned_Debug /
   OBJECT_DIR = CMakeFiles/server.dir
   OBJECT_FILE_DIR = CMakeFiles/server.dir
 
+build CMakeFiles/server.dir/check_sum.cpp.o: CXX_COMPILER__server_unscanned_Debug /home/mostafa-galal/CLionProjects/untitled/check_sum.cpp || cmake_object_order_depends_target_server
+  DEP_FILE = CMakeFiles/server.dir/check_sum.cpp.o.d
+  FLAGS = -g -fdiagnostics-color=always
+  OBJECT_DIR = CMakeFiles/server.dir
+  OBJECT_FILE_DIR = CMakeFiles/server.dir
+
+build CMakeFiles/server.dir/packet_construction.cpp.o: CXX_COMPILER__server_unscanned_Debug /home/mostafa-galal/CLionProjects/untitled/packet_construction.cpp || cmake_object_order_depends_target_server
+  DEP_FILE = CMakeFiles/server.dir/packet_construction.cpp.o.d
+  FLAGS = -g -fdiagnostics-color=always
+  OBJECT_DIR = CMakeFiles/server.dir
+  OBJECT_FILE_DIR = CMakeFiles/server.dir
+
 
 # =============================================================================
 # Link build statements for EXECUTABLE target server
@@ -63,7 +75,7 @@ build CMakeFiles/server.dir/server.cpp.o: CXX_COMPILER__server_unscanned_Debug /
 #############################################
 # Link the executable server
 
-build server: CXX_EXECUTABLE_LINKER__server_Debug CMakeFiles/server.dir/server.cpp.o
+build server: CXX_EXECUTABLE_LINKER__server_Debug CMakeFiles/server.dir/server.cpp.o CMakeFiles/server.dir/check_sum.cpp.o CMakeFiles/server.dir/packet_construction.cpp.o
   FLAGS = -g
   OBJECT_DIR = CMakeFiles/server.dir
   POST_BUILD = :
@@ -86,6 +98,18 @@ build CMakeFiles/client.dir/client.cpp.o: CXX_COMPILER__client_unscanned_Debug /
   OBJECT_DIR = CMakeFiles/client.dir
   OBJECT_FILE_DIR = CMakeFiles/client.dir
 
+build CMakeFiles/client.dir/check_sum.cpp.o: CXX_COMPILER__client_unscanned_Debug /home/mostafa-galal/CLionProjects/untitled/check_sum.cpp || cmake_object_order_depends_target_client
+  DEP_FILE = CMakeFiles/client.dir/check_sum.cpp.o.d
+  FLAGS = -g -fdiagnostics-color=always
+  OBJECT_DIR = CMakeFiles/client.dir
+  OBJECT_FILE_DIR = CMakeFiles/client.dir
+
+build CMakeFiles/client.dir/packet_construction.cpp.o: CXX_COMPILER__client_unscanned_Debug /home/mostafa-galal/CLionProjects/untitled/packet_construction.cpp || cmake_object_order_depends_target_client
+  DEP_FILE = CMakeFiles/client.dir/packet_construction.cpp.o.d
+  FLAGS = -g -fdiagnostics-color=always
+  OBJECT_DIR = CMakeFiles/client.dir
+  OBJECT_FILE_DIR = CMakeFiles/client.dir
+
 
 # =============================================================================
 # Link build statements for EXECUTABLE target client
@@ -94,7 +118,7 @@ build CMakeFiles/client.dir/client.cpp.o: CXX_COMPILER__client_unscanned_Debug /
 #############################################
 # Link the executable client
 
-build client: CXX_EXECUTABLE_LINKER__client_Debug CMakeFiles/client.dir/client.cpp.o
+build client: CXX_EXECUTABLE_LINKER__client_Debug CMakeFiles/client.dir/client.cpp.o CMakeFiles/client.dir/check_sum.cpp.o CMakeFiles/client.dir/packet_construction.cpp.o
   FLAGS = -g
   OBJECT_DIR = CMakeFiles/client.dir
   POST_BUILD = :
